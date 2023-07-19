@@ -106,8 +106,8 @@ def main(conf: HydraConfig) -> None:
 
 
             #negative sample guidance, it takes the difference between the target and antitarget outputs meaning its will guide the denosiing away from generating a protein that binds to the antitarget
-            px0 = px0 + (px0 - anti_px0) * n_conf.negative_guidance
-            seq_t = seq_t + (seq_t - anti_seq_t) * n_conf.negative_guidance
+            px0 = px0 + (px0 - anti_px0) * conf.negative_guidance
+            seq_t = seq_t + (seq_t - anti_seq_t) * conf.negative_guidance
 
 
             px0_xyz_stack.append(px0)
@@ -154,27 +154,27 @@ def main(conf: HydraConfig) -> None:
             out,
             denoised_xyz_stack[0, :, :4],
             final_seq,
-            sampler.binderlen,
-            chain_idx=sampler.chain_idx,
+            p_sampler.binderlen,
+            chain_idx=p_sampler.chain_idx,
             bfacts=bfacts,
         )
 
         # run metadata
         trb = dict(
-            config=OmegaConf.to_container(sampler._conf, resolve=True),
+            config=OmegaConf.to_container(p_sampler._conf, resolve=True),
             plddt=plddt_stack.cpu().numpy(),
             device=torch.cuda.get_device_name(torch.cuda.current_device())
             if torch.cuda.is_available()
             else "CPU",
             time=time.time() - start_time,
         )
-        if hasattr(sampler, "contig_map"):
-            for key, value in sampler.contig_map.get_mappings().items():
+        if hasattr(p_sampler, "contig_map"):
+            for key, value in p_sampler.contig_map.get_mappings().items():
                 trb[key] = value
         with open(f"{out_prefix}.trb", "wb") as f_out:
             pickle.dump(trb, f_out)
 
-        if sampler.inf_conf.write_trajectory:
+        if p_sampler.inf_conf.write_trajectory:
             # trajectory pdbs
             traj_prefix = (
                 os.path.dirname(out_prefix) + "/traj/" + os.path.basename(out_prefix)
@@ -189,7 +189,7 @@ def main(conf: HydraConfig) -> None:
                 final_seq.squeeze(),
                 use_hydrogens=False,
                 backbone_only=False,
-                chain_ids=sampler.chain_idx,
+                chain_ids=p_sampler.chain_idx,
             )
 
             out = f"{traj_prefix}_pX0_traj.pdb"
@@ -200,7 +200,7 @@ def main(conf: HydraConfig) -> None:
                 final_seq.squeeze(),
                 use_hydrogens=False,
                 backbone_only=False,
-                chain_ids=sampler.chain_idx,
+                chain_ids=p_sampler.chain_idx,
             )
 
         log.info(f"Finished design in {(time.time()-start_time)/60:.2f} minutes")
