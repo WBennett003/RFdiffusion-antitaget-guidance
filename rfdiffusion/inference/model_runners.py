@@ -36,7 +36,7 @@ class Sampler:
         self.initialized = False
         self.initialize(conf)
         
-    def initialize(self, conf: DictConfig) -> None:
+    def initialize(self, conf: DictConfig, anti=False) -> None:
         """
         Initialize sampler.
         Args:
@@ -145,10 +145,14 @@ class Sampler:
 
         self.allatom = ComputeAllAtomCoords().to(self.device)
         
+        if anti: #to make the input the antiinput this should mean that all downstream code is effect asif it was the input
+            self.inf_conf.input_pdb = self.inf_conf.antiinput_pdb
+
         if self.inf_conf.input_pdb is None:
             # set default pdb
             script_dir=os.path.dirname(os.path.realpath(__file__))
             self.inf_conf.input_pdb=os.path.join(script_dir, '../../examples/input_pdbs/1qys.pdb')
+            
         self.target_feats = iu.process_target(self.inf_conf.input_pdb, parse_hetatom=True, center=False)
         self.chain_idx = None
 
