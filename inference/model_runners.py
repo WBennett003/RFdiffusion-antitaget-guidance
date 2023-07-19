@@ -93,7 +93,7 @@ class Sampler:
                 self.ckpt_path = f'{SCRIPT_DIR}/../models/Base_ckpt.pt'
         # for saving in trb file:
         print(self._conf.inference.trb_save_ckpt_path)
-        assert self._conf.inference.trb_save_ckpt_path is None, "trb_save_ckpt_path is not the place to specify an input model. Specify in inference.ckpt_override_path"
+        # assert self._conf.inference.trb_save_ckpt_path is None, "trb_save_ckpt_path is not the place to specify an input model. Specify in inference.ckpt_override_path"
         self._conf['inference']['trb_save_ckpt_path']=self.ckpt_path
 
         #######################

@@ -45,8 +45,11 @@ def main(conf: HydraConfig) -> None:
     # Initialize sampler and target/contig.
     anti_conf = conf
     anti_conf.inference.input_pdb = conf.inference.antiinput_pdb
-    sampler = iu.sampler_selector(conf)
+    # print(f"pdb | target : {conf.inference.input_pdb} \t | \t antitarget : {anti_conf.inference.input_pdb}")
+    # print(f"trb_save | target : {conf.inference.trb_save_ckpt_path} \t | \t antitarget : {anti_conf.inference.trb_save_ckpt_path}")
     n_sampler = iu.sampler_selector(anti_conf)
+    sampler = iu.sampler_selector(conf)
+    # print(f"trb_save | target : {conf.inference.trb_save_ckpt_path} \t | \t antitarget : {anti_conf.inference.trb_save_ckpt_path}")
 
     # Loop over number of designs to sample.
     design_startnum = sampler.inf_conf.design_startnum
@@ -85,8 +88,8 @@ def main(conf: HydraConfig) -> None:
 
         x_t = torch.clone(x_init)
         seq_t = torch.clone(seq_init)
-        anti_x_t = torch.close(anti_x_init)
-        anti_seq_t = torch.close(anti_seq_init)
+        anti_x_t = torch.clone(anti_x_init)
+        anti_seq_t = torch.clone(anti_seq_init)
 
         # Loop over number of reverse diffusion time steps.
         for num,t in enumerate(range(int(sampler.t_step_input), sampler.inf_conf.final_step - 1, -1)):
