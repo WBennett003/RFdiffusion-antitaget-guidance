@@ -1,17 +1,19 @@
 import torch
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
-from rfdiffusion.RoseTTAFoldModel import RoseTTAFoldModule
-from rfdiffusion.kinematics import get_init_xyz, xyz_to_t2d
-from rfdiffusion.diffusion import Diffuser
-from rfdiffusion.chemical import seq2chars
-from rfdiffusion.util_module import ComputeAllAtomCoords
-from rfdiffusion.contigs import ContigMap
-from rfdiffusion.inference import utils as iu, symmetry
-from rfdiffusion.potentials.manager import PotentialManager
+from RoseTTAFoldModel import RoseTTAFoldModule
+from kinematics import get_init_xyz, xyz_to_t2d
+from diffusion import Diffuser
+from chemical import seq2chars
+from util_module import ComputeAllAtomCoords
+from contigs import ContigMap
+from inference import utils as iu
+from potentials.manager import PotentialManager
+from inference import symmetry
 import logging
 import torch.nn.functional as nn
-from rfdiffusion import util
+import util
+import hydra
 from hydra.core.hydra_config import HydraConfig
 import os
 
