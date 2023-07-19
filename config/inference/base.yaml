@@ -21,9 +21,8 @@ inference:
   final_step: 1
   deterministic: False
   trb_save_ckpt_path: null
-  schedule_directory_path: null
-  model_directory_path: null
-
+  dump_pdb: False
+  dump_pdb_path: "/tmp"
 
 contigmap:
   contigs: null
@@ -67,6 +66,8 @@ model:
     l1_in_features: 3
     l1_out_features: 2
     num_edge_features: 64
+  d_time_emb: null
+  d_time_emb_proj: null
   freeze_track_motif: False
   use_motif_timestep: False
 
