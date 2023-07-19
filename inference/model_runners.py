@@ -17,7 +17,7 @@ import hydra
 from hydra.core.hydra_config import HydraConfig
 import os
 
-from rfdiffusion.model_input_logger import pickle_function_call
+from model_input_logger import pickle_function_call
 import sys
 
 SCRIPT_DIR=os.path.dirname(os.path.realpath(__file__))
