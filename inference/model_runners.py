@@ -17,26 +17,30 @@ import hydra
 from hydra.core.hydra_config import HydraConfig
 import os
 
-from model_input_logger import pickle_function_call
 import sys
-
 SCRIPT_DIR=os.path.dirname(os.path.realpath(__file__))
+sys.path.append(SCRIPT_DIR + '../') # to access RF structure prediction stuff 
+
+from model_input_logger import pickle_function_call
 
 TOR_INDICES  = util.torsion_indices
 TOR_CAN_FLIP = util.torsion_can_flip
 REF_ANGLES   = util.reference_angles
 
+# Check for cache schedule
+if not os.path.exists(f'{SCRIPT_DIR}/../schedules'):
+    os.mkdir(f'{SCRIPT_DIR}/../schedules')
 
 class Sampler:
 
-    def __init__(self, conf: DictConfig):
+    def __init__(self, conf: DictConfig, anti=False):
         """
         Initialize sampler.
         Args:
             conf: Configuration.
         """
         self.initialized = False
-        self.initialize(conf)
+        self.initialize(conf, anti)
         
     def initialize(self, conf: DictConfig, anti=False) -> None:
         """
@@ -48,6 +52,8 @@ class Sampler:
         - Assembles Config from model checkpoint and command line overrides
 
         """
+        
+
         self._log = logging.getLogger(__name__)
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
@@ -62,13 +68,6 @@ class Sampler:
         ### Select Appropriate Model ###
         ################################
 
-        if conf.inference.model_directory_path is not None:
-            model_directory = conf.inference.model_directory_path
-        else:
-            model_directory = f"{SCRIPT_DIR}/../../models"
-
-        print(f"Reading models from {model_directory}")
-
         # Initialize inference only helper objects to Sampler
         if conf.inference.ckpt_override_path is not None:
             self.ckpt_path = conf.inference.ckpt_override_path
@@ -80,18 +79,18 @@ class Sampler:
                     # this is only used for partial diffusion
                     assert conf.diffuser.partial_T is not None, "The provide_seq input is specifically for partial diffusion"
                 if conf.scaffoldguided.scaffoldguided:
-                    self.ckpt_path = f'{model_directory}/InpaintSeq_Fold_ckpt.pt'
+                    self.ckpt_path=f'{SCRIPT_DIR}/../models/InpaintSeq_Fold_ckpt.pt'
                 else:
-                    self.ckpt_path = f'{model_directory}/InpaintSeq_ckpt.pt'
+                    self.ckpt_path = f'{SCRIPT_DIR}/../models/InpaintSeq_ckpt.pt'
             elif conf.ppi.hotspot_res is not None and conf.scaffoldguided.scaffoldguided is False:
                 # use complex trained model
-                self.ckpt_path = f'{model_directory}/Complex_base_ckpt.pt'
+                self.ckpt_path = f'{SCRIPT_DIR}/../models/Complex_base_ckpt.pt'
             elif conf.scaffoldguided.scaffoldguided is True:
                 # use complex and secondary structure-guided model
-                self.ckpt_path = f'{model_directory}/Complex_Fold_base_ckpt.pt'
+                self.ckpt_path = f'{SCRIPT_DIR}/../models/Complex_Fold_base_ckpt.pt'
             else:
                 # use default model
-                self.ckpt_path = f'{model_directory}/Base_ckpt.pt'
+                self.ckpt_path = f'{SCRIPT_DIR}/../models/Base_ckpt.pt'
         # for saving in trb file:
         assert self._conf.inference.trb_save_ckpt_path is None, "trb_save_ckpt_path is not the place to specify an input model. Specify in inference.ckpt_override_path"
         self._conf['inference']['trb_save_ckpt_path']=self.ckpt_path
@@ -120,16 +119,10 @@ class Sampler:
         self.potential_conf = self._conf.potentials
         self.diffuser_conf = self._conf.diffuser
         self.preprocess_conf = self._conf.preprocess
+        self.diffuser = Diffuser(**self._conf.diffuser, cache_dir=f'{SCRIPT_DIR}/../schedules')
 
-        if conf.inference.schedule_directory_path is not None:
-            schedule_directory = conf.inference.schedule_directory_path
-        else:
-            schedule_directory = f"{SCRIPT_DIR}/../../schedules"
-
-        # Check for cache schedule
-        if not os.path.exists(schedule_directory):
-            os.mkdir(schedule_directory)
-        self.diffuser = Diffuser(**self._conf.diffuser, cache_dir=schedule_directory)
+        if anti:
+            self.inf_conf.input_pdb = self.inf_conf.antiinput_pdb
 
         ###########################
         ### Initialise Symmetry ###
@@ -138,23 +131,19 @@ class Sampler:
         if self.inf_conf.symmetry is not None:
             self.symmetry = symmetry.SymGen(
                 self.inf_conf.symmetry,
-                self.inf_conf.recenter,
-                self.inf_conf.radius,
                 self.inf_conf.model_only_neighbors,
+                self.inf_conf.recenter,
+                self.inf_conf.radius, 
             )
         else:
             self.symmetry = None
 
         self.allatom = ComputeAllAtomCoords().to(self.device)
         
-        if anti: #to make the input the antiinput this should mean that all downstream code is effect asif it was the input
-            self.inf_conf.input_pdb = self.inf_conf.antiinput_pdb
-
         if self.inf_conf.input_pdb is None:
             # set default pdb
             script_dir=os.path.dirname(os.path.realpath(__file__))
-            self.inf_conf.input_pdb=os.path.join(script_dir, '../../examples/input_pdbs/1qys.pdb')
-            
+            self.inf_conf.input_pdb=os.path.join(script_dir, '../examples/input_pdbs/1qys.pdb')
         self.target_feats = iu.process_target(self.inf_conf.input_pdb, parse_hetatom=True, center=False)
         self.chain_idx = None
 
@@ -253,6 +242,7 @@ class Sampler:
             'L': L,
             'diffuser': self.diffuser,
             'potential_manager': self.potential_manager,
+            'visible': visible
         })
         return iu.Denoise(**denoise_kwargs)
 
@@ -322,15 +312,23 @@ class Sampler:
         ####################################
 
         if self.diffuser_conf.partial_T:
-            assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
-                    each residue implied by the contig string for partial diffusion.  length of \
-                    input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
-            assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
-                    be no offset between the index of a residue in the input and the index of the \
-                    residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
-            # Partially diffusing from a known structure
-            xyz_mapped=xyz_27
-            atom_mask_mapped = mask_27
+            if self.symmetry is not None:
+                L = L_mapped // self.symmetry.order
+                xyz_mapped = torch.full((L_mapped,27,3),np.nan)
+                atom_mask_mapped = torch.full((L_mapped, 27), False)
+                xyz_mapped[:L] = xyz_27[:L]
+                atom_mask_mapped[:L] = mask_27[:L]
+
+            else:
+                assert xyz_27.shape[0] == L_mapped, f"there must be a coordinate in the input PDB for \
+                        each residue implied by the contig string for partial diffusion.  length of \
+                        input PDB != length of contig string: {xyz_27.shape[0]} != {L_mapped}"
+                assert contig_map.hal_idx0 == contig_map.ref_idx0, f'for partial diffusion there can \
+                        be no offset between the index of a residue in the input and the index of the \
+                        residue in the output, {contig_map.hal_idx0} != {contig_map.ref_idx0}'
+                # Partially diffusing from a known structure
+                xyz_mapped=xyz_27
+                atom_mask_mapped = mask_27
         else:
             # Fully diffusing from points initialised at the origin
             # adjust size of input xt according to residue map
@@ -339,7 +337,7 @@ class Sampler:
             xyz_motif_prealign = xyz_mapped.clone()
             motif_prealign_com = xyz_motif_prealign[0,0,:,1].mean(dim=0)
             self.motif_com = xyz_27[contig_map.ref_idx0,1].mean(dim=0)
-            xyz_mapped = get_init_xyz(xyz_mapped).squeeze()
+            xyz_mapped = get_init_xyz(xyz_mapped, center=self.symmetry is None).squeeze()
             # adjust the size of the input atom map
             atom_mask_mapped = torch.full((L_mapped, 27), False)
             atom_mask_mapped[contig_map.hal_idx0] = mask_27[contig_map.ref_idx0]
@@ -366,6 +364,11 @@ class Sampler:
         seq_t[~self.mask_seq.squeeze()] = 21
         seq_t    = torch.nn.functional.one_hot(seq_t, num_classes=22).float() # [L,22]
         seq_orig = torch.nn.functional.one_hot(seq_orig, num_classes=22).float() # [L,22]
+
+        ############################################################################
+        if self.symmetry is not None:
+            xyz_mapped, seq_t = self.symmetry.apply_symmetry(xyz_mapped, seq_t)
+        ############################################################################
 
         fa_stack, xyz_true = self.diffuser.diffuse_pose(
             xyz_mapped,
@@ -509,7 +512,7 @@ class Sampler:
         ### alpha_t ###
         ###############
         seq_tmp = t1d[...,:-1].argmax(dim=-1).reshape(-1,L)
-        alpha, _, alpha_mask, _ = util.get_torsions(xyz_t.reshape(-1, L, 27, 3), seq_tmp, TOR_INDICES, TOR_CAN_FLIP, REF_ANGLES)
+        alpha, _, alpha_mask, _ = util.get_torsions(xyz_t.reshape(-1,L,27,3), seq_tmp, TOR_INDICES, TOR_CAN_FLIP, REF_ANGLES)
         alpha_mask = torch.logical_and(alpha_mask, ~torch.isnan(alpha[...,0]))
         alpha[torch.isnan(alpha)] = 0.0
         alpha = alpha.reshape(1,-1,L,10,2)
@@ -747,7 +750,7 @@ class ScaffoldedSampler(SelfConditioning):
         """
         super().__init__(conf)
         # initialize BlockAdjacency sampling class
-        self.blockadjacency = iu.BlockAdjacency(conf, conf.inference.num_designs)
+        self.blockadjacency = iu.BlockAdjacency(conf.scaffoldguided, conf.inference.num_designs)
 
         #################################################
         ### Initialize target, if doing binder design ###
