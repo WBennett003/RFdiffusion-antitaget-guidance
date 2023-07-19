@@ -516,16 +516,16 @@ class Denoise:
         return fullatom_next.squeeze()[:, :14, :], px0
 
 
-def sampler_selector(conf: DictConfig):
+def sampler_selector(conf: DictConfig, anti=False):
     if conf.scaffoldguided.scaffoldguided:
-        sampler = model_runners.ScaffoldedSampler(conf)
+        sampler = model_runners.ScaffoldedSampler(conf, anti)
     else:
         if conf.inference.model_runner == "default":
-            sampler = model_runners.Sampler(conf)
+            sampler = model_runners.Sampler(conf, anti)
         elif conf.inference.model_runner == "SelfConditioning":
-            sampler = model_runners.SelfConditioning(conf)
+            sampler = model_runners.SelfConditioning(conf, anti)
         elif conf.inference.model_runner == "ScaffoldedSampler":
-            sampler = model_runners.ScaffoldedSampler(conf)
+            sampler = model_runners.ScaffoldedSampler(conf, anti)
         else:
             raise ValueError(f"Unrecognized sampler {conf.model_runner}")
     return sampler
