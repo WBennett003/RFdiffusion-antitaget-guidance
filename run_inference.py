@@ -43,8 +43,10 @@ def main(conf: HydraConfig) -> None:
         make_deterministic()
 
     # Initialize sampler and target/contig.
+    anti_conf = conf
+    anti_conf.inference.input_pdb = conf.inference.antiinput_pdb
     sampler = iu.sampler_selector(conf)
-    n_sampler = iu.sampler_selector(conf, anti=True)
+    n_sampler = iu.sampler_selector(anti_conf)
 
     # Loop over number of designs to sample.
     design_startnum = sampler.inf_conf.design_startnum
