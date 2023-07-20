@@ -13,7 +13,7 @@
 
 This is a modification of the RFdiffusion which allows for negative sample guidance which tells the model what the generated protein should not bind to. This is useful in the case of immunoproteins targeting oncoproteins should not bind to the wildtype for exmaple.
 
-This technique is derived from classifier-free guidance from Text-to-image synthesis paper from [Jo Ho, Tim Salimans] (https://arxiv.org/abs/2207.12598)
+This technique is derived from classifier-free guidance from Text-to-image synthesis paper from [Jo Ho, Tim Salimans](https://arxiv.org/abs/2207.12598)
 
 $$ x_{t-1} = x_{t-1} + \gamma (x_{t-1} - w_{t-1}) $$ 
 
