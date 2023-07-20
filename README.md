@@ -21,7 +21,7 @@ $$ x_{t-1} : \text{Positive sample (target) predicted noise} $$
 
 $$ w_{t-1} : \text{Negative sample (antitarget) predicted noise}$$
 
-$$ w_{t-1} : \text{Negative sample (antitarget) predicted noise}$$
+$$ \gamma : \text{negative guidance coefficent}$$
 
 RFdiffusion is an open source method for structure generation, with or without conditional information (a motif, target etc). It can perform a whole range of protein design challenges as we have outlined in [the RFdiffusion paper](https://www.biorxiv.org/content/10.1101/2022.12.09.519842v1).
 
