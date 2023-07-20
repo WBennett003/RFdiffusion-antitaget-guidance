@@ -101,8 +101,8 @@ def main(conf: HydraConfig) -> None:
             )
 
 
-            px0 = px0 + (px0 - anti_px0) * conf.negative_guidance
-            seq_t = seq_t + (seq_t - anti_seq_t) * conf.negative_guidance
+            px0 = px0 + (px0 - anti_px0) * conf.inference.negative_guidance
+            seq_t = seq_t + (seq_t - anti_seq_t) * conf.inference.negative_guidance
 
 
             px0_xyz_stack.append(px0)
