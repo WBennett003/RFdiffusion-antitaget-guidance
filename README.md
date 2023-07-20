@@ -21,6 +21,7 @@ $$ x_{t-1} : \text{Positive sample (target) predicted noise} $$
 
 $$ w_{t-1} : \text{Negative sample (antitarget) predicted noise}$$
 
+$$ w_{t-1} : \text{Negative sample (antitarget) predicted noise}$$
 
 RFdiffusion is an open source method for structure generation, with or without conditional information (a motif, target etc). It can perform a whole range of protein design challenges as we have outlined in [the RFdiffusion paper](https://www.biorxiv.org/content/10.1101/2022.12.09.519842v1).
 
@@ -36,7 +37,7 @@ RFdiffusion is an open source method for structure generation, with or without c
 
 ## Getting started / installation
 
-Thanks to Sergey Ovchinnikov, RFdiffusion is available as a [Google Colab Notebook](https://colab.research.google.com/github/sokrypton/ColabDesign/blob/v1.1.1/rf/examples/diffusion.ipynb) if you would like to run it there!
+Thanks to Sergey Ovchinnikov, RFdiffusion is available as a [Google Colab Notebook(https://colab.research.google.com/github/sokrypton/ColabDesign/blob/v1.1.1/rf/examples/diffusion.ipynb) if you would like to run it there!
 
 We strongly recommend reading this README carefully before getting started with RFdiffusion, and working through some of the examples in the Colab Notebook.
 
